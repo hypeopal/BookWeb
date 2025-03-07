@@ -28,7 +28,7 @@
   </div>
   <div class="chat-container">
     <div class="msg-area"></div>
-    <div class="send-area"></div>
+    <div class="send-area">写一个cpp的hello world程序</div>
   </div>
   <input type="text" v-model="prompt"/>
   <button @click="sendMessage" style="margin-top: 5px;margin-bottom: 5px;">发送</button>
@@ -40,7 +40,20 @@ import { ref, onMounted } from 'vue';
 import api from "./js/request.js";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import MarkdownIt from "markdown-it";
-import "github-markdown-css"
+import "github-markdown-css";
+import hljs from "highlight.js/lib/core";
+import "highlight.js/styles/github.css"
+import cpp from 'highlight.js/lib/languages/cpp';
+import java from 'highlight.js/lib/languages/java';
+import python from 'highlight.js/lib/languages/python';
+import sql from 'highlight.js/lib/languages/sql';
+import javascript from 'highlight.js/lib/languages/javascript';
+
+hljs.registerLanguage('cpp', cpp);
+hljs.registerLanguage('java', java);
+hljs.registerLanguage('python', python);
+hljs.registerLanguage('sql', sql);
+hljs.registerLanguage('javascript', javascript);
 
 const username = ref('');
 const password = ref('');
@@ -48,7 +61,30 @@ const errorMessage = ref('');
 const serverAddress = "http://localhost:8088/api";
 const prompt = ref('');
 const ans = ref('');
-let md = new MarkdownIt();
+let md = new MarkdownIt({
+  html: true,
+  linkify: true,
+  breaks: true,
+  xhtmlOut: true,
+  typographer: true,
+  highlight: function (str, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return (
+            '<pre class="hljs"><code>' +
+            hljs.highlight(lang, str).value +
+            "</code></pre>"
+        );
+      } catch (__) { }
+    }
+
+    return (
+        '<pre class="hljs"><code>' +
+        md.utils.escapeHtml(str) +
+        "</code></pre>"
+    );
+  },
+});
 const handleLogin = async () => {
   try {
     const response = await api.post(serverAddress + "/user/login", {
