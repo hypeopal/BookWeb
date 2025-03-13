@@ -28,15 +28,15 @@
   </div>
   <div class="chat-container">
     <div class="msg-area"></div>
-    <div class="send-area">写一个cpp的hello world程序</div>
+    <div class="send-area">写一个cpp的hello world程序  贝叶斯概率公式是什么</div>
   </div>
   <input type="text" v-model="prompt"/>
   <button @click="sendMessage" style="margin-top: 5px;margin-bottom: 5px;">发送</button>
-  <div v-html="md.render(ans)" class="markdown-body" style="font-size: small"></div>
+  <div v-html="md.render(ans)" class="markdown-body"></div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import api from "./js/request.js";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import MarkdownIt from "markdown-it";
@@ -48,19 +48,41 @@ import java from 'highlight.js/lib/languages/java';
 import python from 'highlight.js/lib/languages/python';
 import sql from 'highlight.js/lib/languages/sql';
 import javascript from 'highlight.js/lib/languages/javascript';
+import bash from 'highlight.js/lib/languages/bash';
+import shell from 'highlight.js/lib/languages/shell';
+import cmake from 'highlight.js/lib/languages/cmake';
+import yaml from 'highlight.js/lib/languages/yaml';
+import typescript from 'highlight.js/lib/languages/typescript';
+import json from 'highlight.js/lib/languages/json';
+import csharp from 'highlight.js/lib/languages/csharp';
+import rust from 'highlight.js/lib/languages/rust';
+import go from 'highlight.js/lib/languages/go';
+import markdown from 'highlight.js/lib/languages/markdown';
 
 hljs.registerLanguage('cpp', cpp);
 hljs.registerLanguage('java', java);
 hljs.registerLanguage('python', python);
 hljs.registerLanguage('sql', sql);
 hljs.registerLanguage('javascript', javascript);
+hljs.registerLanguage('bash', bash);
+hljs.registerLanguage('shell', shell);
+hljs.registerLanguage('cmake', cmake);
+hljs.registerLanguage('yaml', yaml);
+hljs.registerLanguage('typescript', typescript);
+hljs.registerLanguage('json', json);
+hljs.registerLanguage('csharp', csharp);
+hljs.registerLanguage('rust', rust);
+hljs.registerLanguage('go', go);
+hljs.registerLanguage('markdown', markdown);
+
 
 const username = ref('');
 const password = ref('');
 const errorMessage = ref('');
 const serverAddress = "http://localhost:8088/api";
 const prompt = ref('');
-const ans = ref('');
+//let ans = '\`\`\`cpp \n #include <iostream>\n using namespace std;\n int main() {\n    cout << "Hello, World!" << endl;\n    return 0;\n}\n\`\`\`';
+const ans = ref('$\\Sigma_{i=1}^{n}x^2$');
 let md = new MarkdownIt({
   html: true,
   linkify: true,
@@ -68,20 +90,19 @@ let md = new MarkdownIt({
   xhtmlOut: true,
   typographer: true,
   highlight: function (str, lang) {
+    let codeContent = '';
     if (lang && hljs.getLanguage(lang)) {
       try {
-        return (
-            '<pre class="hljs"><code>' +
-            hljs.highlight(lang, str).value +
-            "</code></pre>"
-        );
+        codeContent = hljs.highlight(lang, str).value;
       } catch (__) { }
+    } else {
+      codeContent = md.utils.escapeHtml(str);
     }
-
     return (
         '<pre class="hljs"><code>' +
-        md.utils.escapeHtml(str) +
-        "</code></pre>"
+        codeContent +
+        '<b>' + lang + '</b>' +
+        '</code></pre>'
     );
   },
 });
@@ -100,10 +121,10 @@ const handleLogin = async () => {
   } catch (e) {
     console.log(e);
   }
-};
+}
 
 const sendMessage = async () => {
-  ans.value = '';
+  ans.value = '**正在思考...**';
   let think = false;
   if (prompt.value) {
     const ctrl = new AbortController();
@@ -123,46 +144,65 @@ const sendMessage = async () => {
         if (response.status !== 200) {
           ctrl.abort();
           console.log("failed to connect");
+          ans.value = ' **服务器繁忙，请稍候再试。** ';
           return false;
         }
         console.log("connected");
       },
       onmessage(event) {
         const data = JSON.parse(event.data);
-        // console.log(data);
+        console.log(data);
         //console.log(data.message);
         let content = String(data.message.content);
         if (think) {
           content = content.replace(/\n/g, "\n>");
-          ans.value += content;
           if (content.includes("</think>")) {
             content = content.replace("</think>", "");
             think = false;
           }
+          ans.value += content;
         } else {
           if (content.includes("<think>")) {
-            content = content.replace("<think>", "> 深度思考：");
+            ans.value = '';
+            content = content.replace("<think>", "> 深度思考：\n > ");
             think = true;
           }
           ans.value += content;
         }
-
+        if (isAtBottom()) {
+          window.scrollBy({
+            top: 100,
+            behavior: "smooth",
+          });
+        }
       },
       onclose() {
         console.log("close");
       },
       onerror(e) {
         console.log(e);
+        ans.value += ' **服务器繁忙，请稍候再试。** ';
+        throw e;
       }
     });
+  } else {
+    ans.value = ' **请输入问题** ';
   }
 }
-
+const isAtBottom = () => {
+  const scrollTop = window.scrollY || document.documentElement.scrollTop;
+  const clientHeight = document.documentElement.clientHeight;
+  const scrollHeight = document.documentElement.scrollHeight;
+  return scrollTop + clientHeight >= scrollHeight - 50;
+}
 
 
 onMounted(() => {
 
 });
+onUnmounted(() => {
+
+})
 </script>
 
 <style scoped>
